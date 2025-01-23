@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 import requests
 import hashlib
 
@@ -9,9 +9,32 @@ app = Flask(__name__)
 TRUSTED_TOKENS = {"valid_token_1", "valid_token_2"}
 
 
+@app.route("/", methods=["GET"])
+def get_main():
+    return  render_template_string('''<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Token Form</title>
+            </head>
+            <body>
+                <h1>Введите токен</h1>
+                <form action="/update" method="POST">
+                    <label for="token">Токен:</label>
+                    <input type="text" id="token" name="token" required>
+                    <button type="submit">Отправить</button>
+                </form>
+            </body>
+            </html>''')
+
+
 @app.route("/update", methods=["POST"])
 def handle_update_request():
-    token = request.json.get("token")
+    if request.is_json:
+        token = request.json.get("token")  # Для JSON-запросов
+    else:
+        token = request.form.get("token")  # Для данных из формы
 
     if token in TRUSTED_TOKENS:
         # Вызываем сервис обновления
@@ -60,7 +83,7 @@ def make_backup():
 
 def verify_update(file):
     with open(file, 'rb') as opened_file:  # Открываем файл в бинарном режиме
-        file_data = opened_file.read() 
+        file_data = opened_file.read()
         sha256_hash = hashlib.sha256(file_data).hexdigest()
         if sha256_hash == os.getenv('EXPECTED_HASH'):
             return 200
